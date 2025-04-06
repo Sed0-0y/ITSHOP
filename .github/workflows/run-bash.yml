@@ -1,0 +1,21 @@
+name: Run Bash Commands
+
+on:
+  push:
+    branches:
+      - main  # Запускать при пуше в ветку main
+  workflow_dispatch:  # Возможность запускать вручную
+
+jobs:
+  run-bash:
+    runs-on: ubuntu-latest  # Используем Ubuntu как операционную систему
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3  # Клонируем репозиторий
+
+      - name: Run Bash Commands
+        run: |
+          echo "Hello, World!"  # Пример команды Bash
+          ls -la  # Список файлов в текущей директории
+          pwd  # Текущая директория
