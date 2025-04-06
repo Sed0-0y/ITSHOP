@@ -1,4 +1,4 @@
-name: Run Bash Commands
+name: Generate requirements.txt
 
 on:
   push:
@@ -7,15 +7,43 @@ on:
   workflow_dispatch:  # Возможность запускать вручную
 
 jobs:
-  run-bash:
+  generate-requirements:
     runs-on: ubuntu-latest  # Используем Ubuntu как операционную систему
 
     steps:
+      # Шаг 1: Клонируем репозиторий
       - name: Checkout code
-        uses: actions/checkout@v3  # Клонируем репозиторий
+        uses: actions/checkout@v3
 
-      - name: Run Bash Commands
+      # Шаг 2: Устанавливаем Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11  # Указываем версию Python
+
+      # Шаг 3: Устанавливаем pipreqs для генерации requirements.txt
+      - name: Install pipreqs
         run: |
-          echo "Hello, World!"  # Пример команды Bash
-          ls -la  # Список файлов в текущей директории
-          pwd  # Текущая директория
+          pip install pipreqs
+
+      # Шаг 4: Генерируем requirements.txt
+      - name: Generate requirements.txt
+        run: |
+          pipreqs . --force  # Генерируем файл requirements.txt на основе импортов в проекте
+
+      # Шаг 5: Проверяем содержимое requirements.txt
+      - name: Display requirements.txt
+        run: |
+          echo "Содержимое requirements.txt:"
+          cat requirements.txt
+
+      # Шаг 6: Коммитим и пушим изменения (опционально)
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add requirements.txt
+          git commit -m "Автоматически сгенерирован requirements.txt"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Используем токен для авторизации
