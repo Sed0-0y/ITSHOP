@@ -9,8 +9,8 @@ import sqlite3
 import asyncio
 
 # Настройки бота
-API_TOKEN = "ВАШ_ТОКЕН_БОТА"  # Замените на токен вашего бота
-ADMIN_ID = ВАШ_TELEGRAM_ID  # Замените на ваш Telegram ID
+API_TOKEN = "8190038878:AAF_gh-NqR3fCFB2hEiFFhuKPtvK_cH_aEg"  # Замените на токен вашего бота
+ADMIN_ID = 6286389072  # Замените на ваш Telegram ID
 bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
