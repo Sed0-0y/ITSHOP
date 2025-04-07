@@ -306,21 +306,48 @@ async def cancel_last_item(callback_query: types.CallbackQuery, state: FSMContex
                 [f"{i+1}. {item['name']} - {item['quantity']} шт., {item['weight']} кг, {item['price']} €"
                  for i, item in enumerate(order_list)]
             )
-            await callback_query.message.edit_text(
-                f"{get_translation(callback_query.from_user.id, 'order_summary', name=data.get('name', 'N/A'), address=data.get('address', 'N/A'), phone=data.get('phone', 'N/A'), email=data.get('email', 'N/A'), order_details=order_summary, total_weight=sum(item['weight'] for item in order_list), total_cost=sum(item['price'] for item in order_list))}"
+            # Формируем перевод строки с данными
+            translation = get_translation(
+                callback_query.from_user.id,
+                "order_summary",
+                name=data.get("name", "N/A"),
+                address=data.get("address", "N/A"),
+                phone=data.get("phone", "N/A"),
+                email=data.get("email", "N/A"),
+                order_details=order_summary,
+                total_weight=sum(item["weight"] for item in order_list),
+                total_cost=sum(item["price"] for item in order_list)
             )
+
+            # Клавиатура для управления заказом
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text=get_translation(callback_query.from_user.id, "button_continue_order"),
+                        callback_data="continue_order"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text=get_translation(callback_query.from_user.id, "button_cancel_last_item"),
+                        callback_data="cancel_last_item"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text=get_translation(callback_query.from_user.id, "button_finish_order"),
+                        callback_data="finish_order"
+                    )
+                ]
+            ])
+
+            # Отправляем обновлённый список товаров
+            await callback_query.message.edit_text(translation, reply_markup=keyboard)
         else:
+            # Если список пуст, уведомляем клиента
             await callback_query.message.edit_text(get_translation(callback_query.from_user.id, "order_cancelled"))
     else:
         await callback_query.message.answer(get_translation(callback_query.from_user.id, "order_cancelled"))
-
-@router.callback_query(lambda c: c.data == "finish_order")
-async def finish_order(callback_query: types.CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    order_list = data.get("order_list", [])
-    if not order_list:
-        await callback_query.message.answer(get_translation(callback_query.from_user.id, "order_cancelled"))
-        return
 
     # Формируем итоговый список
     total_weight = sum(item["weight"] for item in order_list)
@@ -378,7 +405,7 @@ async def confirm_order(callback_query: types.CallbackQuery, state: FSMContext):
     # Уведомляем клиента
     await callback_query.message.answer(get_translation(user_id, "order_confirmed"))
 
-    # Уведомляем администратора
+    # Формируем сообщение для администратора
     admin_message = get_translation(user_id, "admin_notification",
                                      name=data['name'],
                                      address=data['address'],
@@ -390,7 +417,25 @@ async def confirm_order(callback_query: types.CallbackQuery, state: FSMContext):
                                      total_weight=sum(item["weight"] for item in data["order_list"]),
                                      total_cost=sum(item["price"] for item in data["order_list"]),
                                      telegram_id=user_id)
-    await bot.send_message(chat_id=ADMIN_ID, text=admin_message)
+
+    # Кнопки для администратора
+    admin_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="Ответить",
+                url=f"tg://user?id={user_id}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="Запросить оплату",
+                callback_data=f"request_payment_{user_id}"
+            )
+        ]
+    ])
+
+    # Отправляем сообщение администратору
+    await bot.send_message(chat_id=ADMIN_ID, text=admin_message, reply_markup=admin_keyboard)
 
     # Очищаем состояние
     await state.clear()
