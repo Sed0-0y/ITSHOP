@@ -5,12 +5,14 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.filters import Command
+from aiohttp import web
 import sqlite3
 import asyncio
 
 # Настройки бота
-API_TOKEN = "8190038878:AAF_gh-NqR3fCFB2hEiFFhuKPtvK_cH_aEg"  # Замените на токен вашего бота
-ADMIN_ID = 6286389072  # Замените на ваш Telegram ID
+API_TOKEN = "8190038878:AAF_gh-NqR3fCFB2hEiFFhuKPtvK_cH_aEg"  # Токен бота
+PROVIDER_TOKEN = "2051251535:TEST:OTk5MDA4ODgxLTAwNQ"  # Токен платёжного провайдера
+ADMIN_ID = 6286389072  # Telegram ID администратора
 bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
@@ -41,7 +43,7 @@ CREATE TABLE IF NOT EXISTS orders (
 """)
 conn.commit()
 
-# Состояния для управления заказом
+# Состояния для формы заказа
 class OrderForm(StatesGroup):
     name = State()
     address = State()
@@ -52,7 +54,10 @@ class OrderForm(StatesGroup):
     entering_weight = State()
     entering_price = State()
     confirming_list = State()
-    confirm = State()
+
+# Состояния для оплаты
+class PaymentForm(StatesGroup):
+    total_amount = State()  # Состояние для ввода стоимости доставки
 
 # Хранилище языков пользователей
 user_languages = {}
@@ -94,42 +99,7 @@ translations = {
         "service_cost": "Стоимость услуги (10%)",
         "total_amount": "Итоговая сумма"
     },
-    "en": {
-        "choose_language": "Choose your language:",
-        "language_selected": "Language selected!",
-        "download_catalog": "Thank you! Now you can download the product catalog.",
-        "catalog_not_found": "The product catalog was not found. Please upload the catalog.pdf file to the bot's folder.",
-        "fill_order_form": "After reviewing the catalog, click the button below to start your order.",
-        "enter_name": "Enter your full name:",
-        "enter_address": "Enter your delivery address:",
-        "enter_phone": "Enter your phone number:",
-        "enter_email": "Enter your email:",
-        "enter_product_name": "Enter the product name:",
-        "enter_quantity": "Enter the product quantity:",
-        "enter_weight": "Enter the product weight (in kg):",
-        "enter_price": "Enter the product price (in €):",
-        "order_summary": "Your order:\nName: {name}\nAddress: {address}\nPhone: {phone}\nEmail: {email}\n\nOrder details:\n{order_details}\n\nTotal weight: {total_weight} kg\nTotal cost: {total_cost} €",
-        "order_confirmed": "Your order has been confirmed! We will contact you to clarify the details.",
-        "order_cancelled": "Order cancelled.",
-        "unknown_message": "Sorry, I don't understand this message. Try using commands or follow the instructions.",
-        "admin_notification": "New order from {name}:\nAddress: {address}\nPhone: {phone}\nEmail: {email}\nOrder details:\n{order_details}\nTotal weight: {total_weight} kg\nTotal cost: {total_cost} €\n\nTelegram ID of the client: {telegram_id}\n",
-        "button_continue_order": "Continue order",
-        "button_cancel_last_item": "Cancel last item",
-        "button_finish_order": "Finish list",
-        "button_confirm": "Confirm",
-        "button_edit": "Edit",
-        "button_cancel": "Cancel",
-        "button_new_order": "New Order",
-        "button_start_order": "Start Order",
-        "new_order_prompt": "If you want to place a new order, click the button below:",
-        "start_order_prompt": "If you want to start the order again, click the button below.",
-        "pay_order_prompt": "Pay for the order",
-        "total_cost_of_goods": "Total cost of goods",
-        "delivery_cost": "Delivery cost",
-        "service_cost": "Service cost (10%)",
-        "total_amount": "Total amount"
-    },
-    # Добавьте переводы для других языков (it, de, fr, es) аналогично
+    # Добавьте переводы для других языков (en, it, de, fr, es) аналогично
 }
 
 # Функция для получения перевода
@@ -185,11 +155,14 @@ async def set_language(callback_query: types.CallbackQuery):
     )
     await callback_query.message.answer(get_translation(callback_query.from_user.id, "fill_order_form"), reply_markup=start_order_keyboard)
 
+# Обработка кнопки "Начать заказ"
 @router.callback_query(lambda c: c.data == "start_order")
 async def handle_start_order(callback_query: types.CallbackQuery, state: FSMContext):
+    # Устанавливаем состояние для ввода имени
     await state.set_state(OrderForm.name)
     await callback_query.message.answer(get_translation(callback_query.from_user.id, "enter_name"))
 
+# Сбор данных для заказа
 @router.message(OrderForm.name)
 async def process_name(message: types.Message, state: FSMContext):
     await state.update_data(name=message.text)
@@ -430,10 +403,29 @@ async def cancel_order(callback_query: types.CallbackQuery, state: FSMContext):
     await state.clear()
     await callback_query.message.answer(get_translation(callback_query.from_user.id, "order_cancelled"))
 
+# HTTP-сервер для поддержки активности
+async def handle(request):
+    return web.Response(text="Bot is running!")
+
+async def start_web_server():
+    app = web.Application()
+    app.router.add_get("/", handle)  # Обработка GET-запросов на корневой URL
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", 8080)  # Сервер будет слушать порт 8080
+    await site.start()
+    print("Web server is running on http://0.0.0.0:8080")
+
+# Запуск бота и HTTP-сервера
 async def main():
     dp.include_router(router)
     await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+
+    # Запускаем HTTP-сервер и бота параллельно
+    await asyncio.gather(
+        start_web_server(),  # Запуск HTTP-сервера
+        dp.start_polling(bot)  # Запуск бота
+    )
 
 if __name__ == "__main__":
     asyncio.run(main())
