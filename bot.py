@@ -405,11 +405,26 @@ async def enter_price(message: types.Message, state: FSMContext):
         })
         await state.update_data(order_list=order_list)
 
-        # Отображаем текущий список
+        # Формируем список товаров
         order_summary = "\n".join(
             [f"{i+1}. {item['name']} - {item['quantity']} шт., {item['weight']} кг, {item['price']} €"
              for i, item in enumerate(order_list)]
         )
+
+        # Получаем перевод строки с подстановкой данных
+        translation = get_translation(
+            message.from_user.id,
+            "order_summary",
+            name=data.get("name", "N/A"),
+            address=data.get("address", "N/A"),
+            phone=data.get("phone", "N/A"),
+            email=data.get("email", "N/A"),
+            order_details=order_summary,
+            total_weight=sum(item["weight"] for item in order_list),
+            total_cost=sum(item["price"] for item in order_list)
+        )
+
+        # Клавиатура для управления заказом
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -430,7 +445,9 @@ async def enter_price(message: types.Message, state: FSMContext):
                 )
             ]
         ])
-        await message.answer(f"{get_translation(message.from_user.id, 'order_summary')}\n\n{order_summary}", reply_markup=keyboard)
+
+        # Отправляем сообщение с переводом и клавиатурой
+        await message.answer(f"{translation}\n\n{order_summary}", reply_markup=keyboard)
         await state.set_state(OrderForm.confirming_list)
     except ValueError:
         await message.answer(get_translation(message.from_user.id, "enter_price"))
