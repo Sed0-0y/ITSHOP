@@ -307,7 +307,7 @@ async def cancel_last_item(callback_query: types.CallbackQuery, state: FSMContex
                  for i, item in enumerate(order_list)]
             )
             await callback_query.message.edit_text(
-                f"{get_translation(callback_query.from_user.id, 'order_summary')}\n\n{order_summary}"
+                f"{get_translation(callback_query.from_user.id, 'order_summary', name=data.get('name', 'N/A'))}\n\n{order_summary}"
             )
         else:
             await callback_query.message.edit_text(get_translation(callback_query.from_user.id, "order_cancelled"))
