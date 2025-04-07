@@ -165,25 +165,25 @@ async def handle_start_order(callback_query: types.CallbackQuery, state: FSMCont
 # Сбор данных для заказа
 @router.message(OrderForm.name)
 async def process_name(message: types.Message, state: FSMContext):
-    await state.update_data(name=message.text)
+    await state.update_data(name=message.text)  # Сохраняем имя
     await state.set_state(OrderForm.address)
     await message.answer(get_translation(message.from_user.id, "enter_address"))
 
 @router.message(OrderForm.address)
 async def process_address(message: types.Message, state: FSMContext):
-    await state.update_data(address=message.text)
+    await state.update_data(address=message.text)  # Сохраняем адрес
     await state.set_state(OrderForm.phone)
     await message.answer(get_translation(message.from_user.id, "enter_phone"))
 
 @router.message(OrderForm.phone)
 async def process_phone(message: types.Message, state: FSMContext):
-    await state.update_data(phone=message.text)
+    await state.update_data(phone=message.text)  # Сохраняем телефон
     await state.set_state(OrderForm.email)
     await message.answer(get_translation(message.from_user.id, "enter_email"))
 
 @router.message(OrderForm.email)
 async def process_email(message: types.Message, state: FSMContext):
-    await state.update_data(email=message.text)
+    await state.update_data(email=message.text)  # Сохраняем email
     await state.set_state(OrderForm.entering_product_name)
     await state.update_data(order_list=[])  # Инициализация пустого списка товаров
     await message.answer(get_translation(message.from_user.id, "enter_product_name"))
@@ -307,7 +307,7 @@ async def cancel_last_item(callback_query: types.CallbackQuery, state: FSMContex
                  for i, item in enumerate(order_list)]
             )
             await callback_query.message.edit_text(
-                f"{get_translation(callback_query.from_user.id, 'order_summary', name=data.get('name', 'N/A'), address=data.get('address', 'N/A'))}\n\n{order_summary}"
+                f"{get_translation(callback_query.from_user.id, 'order_summary', name=data.get('name', 'N/A'), address=data.get('address', 'N/A'), phone=data.get('phone', 'N/A'), email=data.get('email', 'N/A'), order_details=order_summary, total_weight=sum(item['weight'] for item in order_list), total_cost=sum(item['price'] for item in order_list))}"
             )
         else:
             await callback_query.message.edit_text(get_translation(callback_query.from_user.id, "order_cancelled"))
@@ -332,10 +332,7 @@ async def finish_order(callback_query: types.CallbackQuery, state: FSMContext):
 
     # Отправляем итоговый заказ
     await callback_query.message.answer(
-        f"{get_translation(callback_query.from_user.id, 'order_summary')}\n\n{order_summary}\n\n"
-        f"{get_translation(callback_query.from_user.id, 'total_cost_of_goods')}: {total_price} €\n"
-        f"{get_translation(callback_query.from_user.id, 'total_weight')}: {total_weight} кг\n\n"
-        f"{get_translation(callback_query.from_user.id, 'start_order_prompt')}",
+        f"{get_translation(callback_query.from_user.id, 'order_summary', name=data.get('name', 'N/A'), address=data.get('address', 'N/A'), phone=data.get('phone', 'N/A'), email=data.get('email', 'N/A'), order_details=order_summary, total_weight=total_weight, total_cost=total_price)}",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(
