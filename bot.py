@@ -9,8 +9,8 @@ import sqlite3
 import asyncio
 
 # Настройки бота
-API_TOKEN = "8190038878:AAF_gh-NqR3fCFB2hEiFFhuKPtvK_cH_aEg"  # Замените на токен вашего бота
-ADMIN_ID = 6286389072  # Замените на ваш Telegram ID
+API_TOKEN = "ВАШ_ТОКЕН_БОТА"  # Замените на токен вашего бота
+ADMIN_ID = ВАШ_TELEGRAM_ID  # Замените на ваш Telegram ID
 bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
@@ -129,148 +129,9 @@ translations = {
         "service_cost": "Service cost (10%)",
         "total_amount": "Total amount"
     },
-    "it": {
-    "choose_language": "Scegli la tua lingua:",
-    "language_selected": "Lingua selezionata!",
-    "download_catalog": "Grazie! Ora puoi scaricare il catalogo dei prodotti.",
-    "catalog_not_found": "Il catalogo dei prodotti non è stato trovato. Carica il file catalog.pdf nella cartella del bot.",
-    "fill_order_form": "Dopo aver esaminato il catalogo, clicca sul pulsante qui sotto per iniziare l'ordine.",
-    "enter_name": "Inserisci il tuo nome e cognome:",
-    "enter_address": "Inserisci il tuo indirizzo di consegna:",
-    "enter_phone": "Inserisci il tuo numero di telefono:",
-    "enter_email": "Inserisci la tua email:",
-    "enter_product_name": "Inserisci il nome del prodotto:",
-    "enter_quantity": "Inserisci la quantità del prodotto:",
-    "enter_weight": "Inserisci il peso del prodotto (in kg):",
-    "enter_price": "Inserisci il prezzo del prodotto (in €):",
-    "order_summary": "Il tuo ordine:\nNome: {name}\nIndirizzo: {address}\nTelefono: {phone}\nEmail: {email}\n\nDettagli ordine:\n{order_details}\n\nPeso totale: {total_weight} kg\nCosto totale: {total_cost} €",
-    "order_confirmed": "Il tuo ordine è stato confermato! Ti contatteremo per ulteriori dettagli.",
-    "order_cancelled": "Ordine annullato.",
-    "unknown_message": "Mi dispiace, non capisco questo messaggio. Prova a usare i comandi o segui le istruzioni.",
-    "admin_notification": "Nuovo ordine da {name}:\nIndirizzo: {address}\nTelefono: {phone}\nEmail: {email}\nDettagli ordine:\n{order_details}\nPeso totale: {total_weight} kg\nCosto totale: {total_cost} €\n\nTelegram ID del cliente: {telegram_id}\n",
-    "button_continue_order": "Continua ordine",
-    "button_cancel_last_item": "Annulla ultimo prodotto",
-    "button_finish_order": "Termina lista",
-    "button_confirm": "Conferma",
-    "button_edit": "Modifica",
-    "button_cancel": "Annulla",
-    "button_new_order": "Nuovo ordine",
-    "button_start_order": "Inizia ordine",
-    "new_order_prompt": "Se desideri effettuare un nuovo ordine, clicca sul pulsante qui sotto:",
-    "start_order_prompt": "Se desideri ricominciare l'ordine, clicca sul pulsante qui sotto.",
-    "pay_order_prompt": "Paga l'ordine",
-    "total_cost_of_goods": "Costo totale dei prodotti",
-    "delivery_cost": "Costo di consegna",
-    "service_cost": "Costo del servizio (10%)",
-    "total_amount": "Importo totale"
-},
-"de": {
-    "choose_language": "Wähle deine Sprache:",
-    "language_selected": "Sprache ausgewählt!",
-    "download_catalog": "Danke! Jetzt kannst du den Produktkatalog herunterladen.",
-    "catalog_not_found": "Der Produktkatalog wurde nicht gefunden. Bitte lade die Datei catalog.pdf in den Bot-Ordner hoch.",
-    "fill_order_form": "Klicke nach Durchsicht des Katalogs auf die Schaltfläche unten, um deine Bestellung zu starten.",
-    "enter_name": "Gib deinen vollständigen Namen ein:",
-    "enter_address": "Gib deine Lieferadresse ein:",
-    "enter_phone": "Gib deine Telefonnummer ein:",
-    "enter_email": "Gib deine E-Mail-Adresse ein:",
-    "enter_product_name": "Gib den Produktnamen ein:",
-    "enter_quantity": "Gib die Produktmenge ein:",
-    "enter_weight": "Gib das Produktgewicht (in kg) ein:",
-    "enter_price": "Gib den Produktpreis (in €) ein:",
-    "order_summary": "Deine Bestellung:\nName: {name}\nAdresse: {address}\nTelefon: {phone}\nE-Mail: {email}\n\nBestelldetails:\n{order_details}\n\nGesamtgewicht: {total_weight} kg\nGesamtkosten: {total_cost} €",
-    "order_confirmed": "Deine Bestellung wurde bestätigt! Wir werden uns mit dir in Verbindung setzen, um die Details zu klären.",
-    "order_cancelled": "Bestellung storniert.",
-    "unknown_message": "Entschuldigung, ich verstehe diese Nachricht nicht. Versuche, Befehle zu verwenden oder folge den Anweisungen.",
-    "admin_notification": "Neue Bestellung von {name}:\nAdresse: {address}\nTelefon: {phone}\nE-Mail: {email}\nBestelldetails:\n{order_details}\nGesamtgewicht: {total_weight} kg\nGesamtkosten: {total_cost} €\n\nTelegram-ID des Kunden: {telegram_id}\n",
-    "button_continue_order": "Bestellung fortsetzen",
-    "button_cancel_last_item": "Letzten Artikel stornieren",
-    "button_finish_order": "Liste abschließen",
-    "button_confirm": "Bestätigen",
-    "button_edit": "Bearbeiten",
-    "button_cancel": "Abbrechen",
-    "button_new_order": "Neue Bestellung",
-    "button_start_order": "Bestellung starten",
-    "new_order_prompt": "Wenn Sie eine neue Bestellung aufgeben möchten, klicken Sie auf die Schaltfläche unten:",
-    "start_order_prompt": "Wenn Sie die Bestellung erneut starten möchten, klicken Sie auf die Schaltfläche unten.",
-    "pay_order_prompt": "Bestellung bezahlen",
-    "total_cost_of_goods": "Gesamtkosten der Waren",
-    "delivery_cost": "Lieferkosten",
-    "service_cost": "Servicekosten (10%)",
-    "total_amount": "Gesamtbetrag"
-},
-    "fr": {
-        "choose_language": "Choisissez votre langue:",
-        "language_selected": "Langue sélectionnée!",
-        "download_catalog": "Merci! Vous pouvez maintenant télécharger le catalogue des produits.",
-        "catalog_not_found": "Le catalogue des produits est introuvable. Veuillez télécharger le fichier catalog.pdf dans le dossier du bot.",
-        "fill_order_form": "Après avoir consulté le catalogue, cliquez sur le bouton ci-dessous pour commencer votre commande.",
-        "enter_name": "Entrez votre nom complet:",
-        "enter_address": "Entrez votre adresse de livraison:",
-        "enter_phone": "Entrez votre numéro de téléphone:",
-        "enter_email": "Entrez votre email:",
-        "enter_product_name": "Entrez le nom du produit:",
-        "enter_quantity": "Entrez la quantité du produit:",
-        "enter_weight": "Entrez le poids du produit (en kg):",
-        "enter_price": "Entrez le prix du produit (en €):",
-        "order_summary": "Votre commande:\nNom: {name}\nAdresse: {address}\nTéléphone: {phone}\nEmail: {email}\n\nDétails de la commande:\n{order_details}\n\nPoids total: {total_weight} kg\nCoût total: {total_cost} €",
-        "order_confirmed": "Votre commande a été confirmée! Nous vous contacterons pour plus de détails.",
-        "order_cancelled": "Commande annulée.",
-        "unknown_message": "Désolé, je ne comprends pas ce message. Essayez d'utiliser des commandes ou suivez les instructions.",
-        "admin_notification": "Nouvelle commande de {name}:\nAdresse: {address}\nTéléphone: {phone}\nEmail: {email}\nDétails de la commande:\n{order_details}\nPoids total: {total_weight} kg\nCoût total: {total_cost} €\n\nID Telegram du client: {telegram_id}\n",
-        "button_continue_order": "Continuer la commande",
-        "button_cancel_last_item": "Annuler le dernier article",
-        "button_finish_order": "Terminer la liste",
-        "button_confirm": "Confirmer",
-        "button_edit": "Modifier",
-        "button_cancel": "Annuler",
-        "button_new_order": "Nouvelle commande",
-        "button_start_order": "Commencer la commande",
-        "new_order_prompt": "Si vous souhaitez passer une nouvelle commande, cliquez sur le bouton ci-dessous:",
-        "start_order_prompt": "Si vous souhaitez recommencer la commande, cliquez sur le bouton ci-dessous.",
-        "pay_order_prompt": "Payer la commande",
-        "total_cost_of_goods": "Coût total des marchandises",
-        "delivery_cost": "Frais de livraison",
-        "service_cost": "Frais de service (10%)",
-        "total_amount": "Montant total"
-    },
-    "es": {
-        "choose_language": "Elige tu idioma:",
-        "language_selected": "¡Idioma seleccionado!",
-        "download_catalog": "¡Gracias! Ahora puedes descargar el catálogo de productos.",
-        "catalog_not_found": "No se encontró el catálogo de productos. Por favor, sube el archivo catalog.pdf a la carpeta del bot.",
-        "fill_order_form": "Después de revisar el catálogo, haz clic en el botón de abajo para iniciar tu pedido.",
-        "enter_name": "Introduce tu nombre completo:",
-        "enter_address": "Introduce tu dirección de entrega:",
-        "enter_phone": "Introduce tu número de teléfono:",
-        "enter_email": "Introduce tu correo electrónico:",
-        "enter_product_name": "Introduce el nombre del producto:",
-        "enter_quantity": "Introduce la cantidad del producto:",
-        "enter_weight": "Introduce el peso del producto (en kg):",
-        "enter_price": "Introduce el precio del producto (en €):",
-        "order_summary": "Tu pedido:\nNombre: {name}\nDirección: {address}\nTeléfono: {phone}\nCorreo electrónico: {email}\n\nDetalles del pedido:\n{order_details}\n\nPeso total: {total_weight} kg\nCosto total: {total_cost} €",
-        "order_confirmed": "¡Tu pedido ha sido confirmado! Nos pondremos en contacto contigo para más detalles.",
-        "order_cancelled": "Pedido cancelado.",
-        "unknown_message": "Lo siento, no entiendo este mensaje. Intenta usar comandos o sigue las instrucciones.",
-        "admin_notification": "Nuevo pedido de {name}:\nDirección: {address}\nTeléfono: {phone}\nCorreo electrónico: {email}\nDetalles del pedido:\n{order_details}\nPeso total: {total_weight} kg\nCosto total: {total_cost} €\n\nID de Telegram del cliente: {telegram_id}\n",
-        "button_continue_order": "Continuar pedido",
-        "button_cancel_last_item": "Cancelar último artículo",
-        "button_finish_order": "Finalizar lista",
-        "button_confirm": "Confirmar",
-        "button_edit": "Editar",
-        "button_cancel": "Cancelar",
-        "button_new_order": "Nuevo pedido",
-        "button_start_order": "Iniciar pedido",
-        "new_order_prompt": "Si deseas realizar un nuevo pedido, haz clic en el botón de abajo:",
-        "start_order_prompt": "Si deseas comenzar el pedido de nuevo, haz clic en el botón de abajo.",
-        "pay_order_prompt": "Pagar el pedido",
-        "total_cost_of_goods": "Costo total de los productos",
-        "delivery_cost": "Costo de envío",
-        "service_cost": "Costo del servicio (10%)",
-        "total_amount": "Cantidad total"
-    }
+    # Добавьте переводы для других языков (it, de, fr, es) аналогично
 }
-    
+
 # Функция для получения перевода
 def get_translation(user_id, key, **kwargs):
     lang = user_languages.get(user_id, "ru")  # По умолчанию русский
@@ -411,7 +272,7 @@ async def enter_price(message: types.Message, state: FSMContext):
              for i, item in enumerate(order_list)]
         )
 
-        # Получаем перевод строки с подстановкой данных
+        # Формируем перевод строки с данными
         translation = get_translation(
             message.from_user.id,
             "order_summary",
@@ -447,7 +308,7 @@ async def enter_price(message: types.Message, state: FSMContext):
         ])
 
         # Отправляем сообщение с переводом и клавиатурой
-        await message.answer(f"{translation}\n\n{order_summary}", reply_markup=keyboard)
+        await message.answer(translation, reply_markup=keyboard)
         await state.set_state(OrderForm.confirming_list)
     except ValueError:
         await message.answer(get_translation(message.from_user.id, "enter_price"))
@@ -462,14 +323,19 @@ async def cancel_last_item(callback_query: types.CallbackQuery, state: FSMContex
     data = await state.get_data()
     order_list = data.get("order_list", [])
     if order_list:
-        order_list.pop()  # Удаляем последний товар
+        # Удаляем последний товар
+        order_list.pop()
         await state.update_data(order_list=order_list)
+
+        # Формируем обновлённый список товаров
         if order_list:
             order_summary = "\n".join(
                 [f"{i+1}. {item['name']} - {item['quantity']} шт., {item['weight']} кг, {item['price']} €"
                  for i, item in enumerate(order_list)]
             )
-            await callback_query.message.edit_text(f"{get_translation(callback_query.from_user.id, 'order_summary')}\n\n{order_summary}")
+            await callback_query.message.edit_text(
+                f"{get_translation(callback_query.from_user.id, 'order_summary')}\n\n{order_summary}"
+            )
         else:
             await callback_query.message.edit_text(get_translation(callback_query.from_user.id, "order_cancelled"))
     else:
@@ -483,12 +349,15 @@ async def finish_order(callback_query: types.CallbackQuery, state: FSMContext):
         await callback_query.message.answer(get_translation(callback_query.from_user.id, "order_cancelled"))
         return
 
+    # Формируем итоговый список
     total_weight = sum(item["weight"] for item in order_list)
     total_price = sum(item["price"] for item in order_list)
     order_summary = "\n".join(
         [f"{i+1}. {item['name']} - {item['quantity']} шт., {item['weight']} кг, {item['price']} €"
          for i, item in enumerate(order_list)]
     )
+
+    # Отправляем итоговый заказ
     await callback_query.message.answer(
         f"{get_translation(callback_query.from_user.id, 'order_summary')}\n\n{order_summary}\n\n"
         f"{get_translation(callback_query.from_user.id, 'total_cost_of_goods')}: {total_price} €\n"
