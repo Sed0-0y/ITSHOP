@@ -601,6 +601,12 @@ async def finish_order(callback_query: types.CallbackQuery, state: FSMContext):
     # Отправляем итоговый список с кнопками
     await callback_query.message.edit_text(translation, reply_markup=keyboard)
 
+@router.callback_query(lambda c: c.data == "edit_order")
+async def edit_order(callback_query: types.CallbackQuery, state: FSMContext):
+    # Возвращаем клиента к добавлению товаров
+    await callback_query.message.answer(get_translation(callback_query.from_user.id, "enter_product_name"))
+    await state.set_state(OrderForm.entering_product_name)
+
 @router.callback_query(lambda c: c.data == "confirm_order")
 async def confirm_order(callback_query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -695,52 +701,6 @@ async def cancel_order(callback_query: types.CallbackQuery, state: FSMContext):
     await callback_query.message.answer(get_translation(callback_query.from_user.id, "new_order_prompt"),
                                         reply_markup=new_order_keyboard)
 
-@router.callback_query(lambda c: c.data.startswith("request_payment_"))
-async def request_payment(callback_query: types.CallbackQuery):
-    user_id = int(callback_query.data.split("_")[-1])
-
-    # Запрашиваем у администратора стоимость доставки
-    await callback_query.message.answer("Введите стоимость доставки (в €):")
-    await PaymentForm.total_amount.set()
-
-    # Сохраняем ID клиента для дальнейшей обработки
-    await bot.get("state").update_data(client_id=user_id)
-
-@router.message(PaymentForm.total_amount)
-async def process_delivery_cost(message: types.Message, state: FSMContext):
-    try:
-        delivery_cost = float(message.text)
-        if delivery_cost <= 0:
-            raise ValueError
-
-        # Получаем данные клиента
-        data = await state.get_data()
-        client_id = data.get("client_id")
-
-        # Рассчитываем итоговую сумму
-        total_cost = delivery_cost + (delivery_cost * 0.1)  # Добавляем 10% за услугу
-        await bot.send_message(
-            client_id,
-            f"Ваш заказ готов к оплате. Итоговая сумма: {total_cost:.2f} €.\n"
-            f"Нажмите на кнопку ниже, чтобы оплатить.",
-            reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [
-                        InlineKeyboardButton(
-                            text=get_translation(client_id, "pay_order_prompt"),
-                            callback_data="pay_order"
-                        )
-                    ]
-                ]
-            )
-        )
-
-        # Уведомляем администратора, что запрос на оплату отправлен
-        await message.answer("Запрос на оплату отправлен клиенту.")
-        await state.clear()
-    except ValueError:
-        await message.answer("Введите корректную стоимость доставки (в €).")
-
 # HTTP-сервер для поддержки активности
 async def handle(request):
     return web.Response(text="Bot is running!")
@@ -757,9 +717,7 @@ async def start_web_server():
 # Запуск бота и HTTP-сервера
 async def main():
     dp.include_router(router)
-    await bot.delete_webhook(drop_pending_updates=True)
-
-    # Запускаем HTTP-сервер и бота параллельно
+    await bot.delete_webhook(drop_pending_updates=True)  # Удаляем старый webhook
     await asyncio.gather(
         start_web_server(),  # Запуск HTTP-сервера
         dp.start_polling(bot)  # Запуск бота
