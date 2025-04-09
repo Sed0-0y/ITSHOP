@@ -527,14 +527,23 @@ async def process_delivery_cost(message: types.Message, state: FSMContext):
         # Получаем ID клиента из состояния
         data = await state.get_data()
         client_id = data.get("client_id")
+        order_list = data.get("order_list", [])
 
         # Рассчитываем итоговую сумму
         total_cost = delivery_cost + (delivery_cost * 0.1)  # Добавляем 10% за услугу
 
-        # Отправляем клиенту запрос на оплату
+        # Формируем список товаров
+        order_summary = "\n".join(
+            [f"{i+1}. {item['name']} - {item['quantity']} шт., {item['weight']} кг, {item['price']} €"
+             for i, item in enumerate(order_list)]
+        )
+
+        # Отправляем клиенту запрос на оплату с информацией о заказе
         await bot.send_message(
             client_id,
-            f"Ваш заказ готов к оплате. Итоговая сумма: {total_cost:.2f} €.\n"
+            f"Ваш заказ:\n\n{order_summary}\n\n"
+            f"Стоимость доставки: {delivery_cost:.2f} €\n"
+            f"Итоговая сумма: {total_cost:.2f} €.\n"
             f"Нажмите на кнопку ниже, чтобы оплатить.",
             reply_markup=InlineKeyboardMarkup(
                 inline_keyboard=[
@@ -554,6 +563,39 @@ async def process_delivery_cost(message: types.Message, state: FSMContext):
     except ValueError:
         # Если введено некорректное значение, просим администратора повторить ввод
         await message.answer("Введите корректную стоимость доставки (в €).")
+
+@router.callback_query(lambda c: c.data == "pay_order")
+async def pay_order(callback_query: types.CallbackQuery):
+    # Уведомляем клиента, что оплата принята
+    await callback_query.message.answer("Спасибо за оплату! Ваш заказ будет обработан в ближайшее время.")
+
+    # Уведомляем администратора об успешной оплате
+    await bot.send_message(
+        ADMIN_ID,
+        f"Клиент {callback_query.from_user.id} оплатил заказ."
+    )
+
+@router.callback_query(lambda c: c.data == "cancel_order")
+async def cancel_order(callback_query: types.CallbackQuery, state: FSMContext):
+    # Очищаем состояние
+    await state.clear()
+
+    # Уведомляем клиента, что заказ отменён
+    await callback_query.message.answer(get_translation(callback_query.from_user.id, "order_cancelled"))
+
+    # Предлагаем клиенту начать новый заказ
+    new_order_keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=get_translation(callback_query.from_user.id, "button_new_order"),
+                    callback_data="start_order"
+                )
+            ]
+        ]
+    )
+    await callback_query.message.answer(get_translation(callback_query.from_user.id, "new_order_prompt"),
+                                        reply_markup=new_order_keyboard)
 
 # HTTP-сервер для поддержки активности
 async def handle(request):
