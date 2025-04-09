@@ -593,6 +593,12 @@ async def process_total_amount(message: types.Message, state: FSMContext):
         # Извлекаем язык клиента
         lang = user_languages.get(client_id, "ru")
 
+        # Формируем список товаров
+        order_summary = "\n".join(
+            [f"{i+1}. {item['name']} - {item['quantity']} шт., {item['weight']} кг, {item['price']} €"
+             for i, item in enumerate(order_list)]
+        )
+
         # Формируем сообщение с деталями заказа
         order_details_message = get_translation(client_id, "order_summary",
                                                  name=name,
