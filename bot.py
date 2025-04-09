@@ -245,6 +245,12 @@ async def enter_price(message: types.Message, state: FSMContext):
              for i, item in enumerate(order_list)]
         )
 
+        # Отправляем сообщение с текущим списком товаров
+        await message.answer(f"Ваш текущий заказ:\n\n{order_summary}")
+        await state.set_state(OrderForm.confirming_list)
+    except ValueError:
+        await message.answer("Введите корректную стоимость товара.")
+
         # Формируем перевод строки с данными
         translation = get_translation(
             message.from_user.id,
@@ -566,7 +572,7 @@ async def process_total_amount(message: types.Message, state: FSMContext):
         address = data['address']
         phone = data['phone']
         email = data['email']
-        order_details = data['order_details']
+        order_list = data.get('order_list', [])
         total_weight = data['total_weight']
         total_cost = data['total_cost']
 
