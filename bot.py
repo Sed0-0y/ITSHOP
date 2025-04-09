@@ -576,10 +576,18 @@ async def process_total_amount(message: types.Message, state: FSMContext):
         # Получаем данные из состояния
         data = await state.get_data()
         client_id = data['client_id']
+        name = data['name']
+        address = data['address']
+        phone = data['phone']
+        email = data['email']
+        order_details = data['order_details']
+        total_weight = data['total_weight']
         total_cost = data['total_cost']
 
-        # Рассчитываем итоговую сумму
+        # Рассчитываем стоимость услуги (10% от общей стоимости товаров)
         service_cost = round(total_cost * 0.1, 2)
+
+        # Итоговая сумма
         total_amount = round(total_cost + delivery_cost + service_cost, 2)
 
         # Сохраняем итоговую сумму в таблицу orders
@@ -596,6 +604,40 @@ async def process_total_amount(message: types.Message, state: FSMContext):
         """, (total_amount, client_id))
         conn.commit()
 
+        # Формируем сообщение с деталями заказа
+        order_details_message = get_translation(client_id, "order_summary",
+                                                 name=name,
+                                                 address=address,
+                                                 phone=phone,
+                                                 email=email,
+                                                 order_details=order_details,
+                                                 total_weight=total_weight,
+                                                 total_cost=total_cost)
+
+        # Формируем сообщение с расчётом стоимости
+        cost_breakdown_message = (
+            f"{get_translation(client_id, 'total_cost_of_goods')}: {total_cost} €\n"
+            f"{get_translation(client_id, 'delivery_cost')}: {delivery_cost} €\n"
+            f"{get_translation(client_id, 'service_cost')}: {service_cost} €\n\n"
+            f"{get_translation(client_id, 'total_amount')}: {total_amount} €"
+        )
+
+        # Кнопка "Оплатить заказ"
+        pay_button_text = get_translation(client_id, "pay_order_prompt")
+        pay_button = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(text=pay_button_text, callback_data=f"pay_order_{client_id}")
+                ]
+            ]
+        )
+
+        # Отправляем клиенту сообщение с деталями заказа
+        await bot.send_message(chat_id=client_id, text=order_details_message, parse_mode="Markdown")
+
+        # Отправляем клиенту сообщение с расчётом стоимости и кнопкой оплаты
+        await bot.send_message(chat_id=client_id, text=cost_breakdown_message, reply_markup=pay_button)
+
         # Уведомляем администратора
         await message.answer(f"Запрос на оплату отправлен клиенту. Итоговая сумма: {total_amount} €")
 
@@ -603,6 +645,7 @@ async def process_total_amount(message: types.Message, state: FSMContext):
         await state.clear()
 
     except ValueError:
+        # Если введено некорректное значение
         await message.answer("Пожалуйста, введите корректную сумму в формате: 12.50")
 
 # HTTP-сервер для поддержки активности
