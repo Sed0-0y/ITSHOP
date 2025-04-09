@@ -648,6 +648,84 @@ async def process_total_amount(message: types.Message, state: FSMContext):
         # Если введено некорректное значение
         await message.answer("Пожалуйста, введите корректную сумму в формате: 12.50")
 
+# Обработка кнопки "Оплатить заказ"
+@router.callback_query(lambda c: c.data.startswith("pay_order_"))
+async def send_invoice(callback_query: types.CallbackQuery):
+    # Извлекаем ID клиента из callback_data
+    client_id = int(callback_query.data.split("_")[2])
+
+    # Получаем итоговую сумму из таблицы orders
+    cursor.execute("""
+    SELECT total_cost
+    FROM orders
+    WHERE telegram_id = ? AND is_paid = 0
+    ORDER BY created_at DESC
+    LIMIT 1
+    """, (client_id,))
+    order = cursor.fetchone()
+
+    if not order:
+        await callback_query.answer("Итоговая сумма не найдена. Попробуйте снова.", show_alert=True)
+        return
+
+    total_amount = order[0]
+
+    # Извлекаем язык пользователя
+    lang = user_languages.get(client_id, "ru")
+
+    # Перевод текста сообщения и кнопки
+    payment_title = get_translation(client_id, "pay_order_prompt")  # Текст заголовка
+    payment_description = get_translation(client_id, "pay_order_prompt")  # Описание платежа
+
+    # Отправляем счёт через Telegram Payments
+    await bot.send_invoice(
+        chat_id=client_id,
+        title=payment_title,
+        description=payment_description,
+        payload=f"order_{client_id}",  # Уникальный идентификатор заказа
+        provider_token=PROVIDER_TOKEN,  # Токен платёжного провайдера
+        currency="EUR",
+        prices=[
+            types.LabeledPrice(label=payment_title, amount=int(total_amount * 100))  # Сумма в центах
+        ],
+        start_parameter="pay_order",
+        need_name=True,
+        need_phone_number=True,
+        need_email=True
+    )
+
+    # Уведомляем администратора, что счёт отправлен
+    await callback_query.answer("Счёт отправлен клиенту.")
+
+
+# Обработка успешной оплаты
+@router.message()
+async def process_successful_payment(message: types.Message):
+    # Проверяем, является ли сообщение успешным платежом
+    if message.successful_payment:
+        payment_info = message.successful_payment
+        client_id = message.from_user.id
+        total_amount = payment_info.total_amount / 100  # Сумма в евро
+
+        # Обновляем статус заказа в базе данных
+        cursor.execute("UPDATE orders SET is_paid = 1 WHERE telegram_id = ? ORDER BY created_at DESC LIMIT 1", (client_id,))
+        conn.commit()
+
+        # Извлекаем язык пользователя
+        lang = user_languages.get(client_id, "ru")
+
+        # Уведомляем клиента
+        payment_confirmation_message = get_translation(client_id, "order_confirmed")
+        await message.answer(payment_confirmation_message)
+
+        # Уведомляем администратора
+        admin_message = (
+            f"Клиент оплатил заказ:\n"
+            f"Telegram ID: {client_id}\n"
+            f"Сумма оплаты: {total_amount} €"
+        )
+        await bot.send_message(ADMIN_ID, admin_message)
+
 # HTTP-сервер для поддержки активности
 async def handle(request):
     return web.Response(text="Bot is running!")
