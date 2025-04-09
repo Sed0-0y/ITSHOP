@@ -572,7 +572,7 @@ async def process_total_amount(message: types.Message, state: FSMContext):
         address = data['address']
         phone = data['phone']
         email = data['email']
-        order_list = data.get('order_list', [])
+        order_details = data['order_details']
         total_weight = data['total_weight']
         total_cost = data['total_cost']
 
@@ -598,12 +598,6 @@ async def process_total_amount(message: types.Message, state: FSMContext):
 
         # Извлекаем язык клиента
         lang = user_languages.get(client_id, "ru")
-
-        # Формируем список товаров
-        order_summary = "\n".join(
-            [f"{i+1}. {item['name']} - {item['quantity']} шт., {item['weight']} кг, {item['price']} €"
-             for i, item in enumerate(order_list)]
-        )
 
         # Формируем сообщение с деталями заказа
         order_details_message = get_translation(client_id, "order_summary",
@@ -633,18 +627,21 @@ async def process_total_amount(message: types.Message, state: FSMContext):
             ]
         )
 
-         # Отправляем клиенту сообщение с деталями заказа
+        # Отправляем клиенту сообщение с деталями заказа
         await bot.send_message(chat_id=client_id, text=order_details_message, parse_mode="Markdown")
 
         # Отправляем клиенту сообщение с расчётом стоимости
         await bot.send_message(chat_id=client_id, text=cost_breakdown_message, reply_markup=pay_button)
 
-        # Уведомляем администратора, что запрос на оплату отправлен
-        await message.answer("Запрос на оплату отправлен клиенту.")
+        # Уведомляем администратора
+        await message.answer(f"Запрос на оплату отправлен клиенту. Итоговая сумма: {total_amount} €")
+
+        # Завершаем состояние
         await state.clear()
+
     except ValueError:
-        # Если введено некорректное значение, просим администратора повторить ввод
-        await message.answer("Введите корректную стоимость доставки (в €).")
+        # Если введено некорректное значение
+        await message.answer("Пожалуйста, введите корректную сумму в формате: 12.50")
 
 # Обработка кнопки "Оплатить заказ"
 @router.callback_query(lambda c: c.data.startswith("pay_order_"))
