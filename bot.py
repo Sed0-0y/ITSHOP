@@ -696,15 +696,18 @@ async def cancel_order(callback_query: types.CallbackQuery, state: FSMContext):
                                         reply_markup=new_order_keyboard)
 
 @router.callback_query(lambda c: c.data.startswith("request_payment_"))
-async def request_payment(callback_query: types.CallbackQuery):
-    user_id = int(callback_query.data.split("_")[-1])
+async def request_payment(callback_query: types.CallbackQuery, state: FSMContext):
+    # Извлекаем ID клиента из callback_data
+    client_id = int(callback_query.data.split("_")[-1])
+
+    # Сохраняем ID клиента в состоянии
+    await state.update_data(client_id=client_id)
 
     # Запрашиваем у администратора стоимость доставки
     await callback_query.message.answer("Введите стоимость доставки (в €):")
-    await PaymentForm.total_amount.set()
 
-    # Сохраняем ID клиента для дальнейшей обработки
-    await bot.get("state").update_data(client_id=user_id)
+    # Устанавливаем состояние для ввода стоимости доставки
+    await state.set_state(PaymentForm.total_amount)
 
 @router.message(PaymentForm.total_amount)
 async def process_delivery_cost(message: types.Message, state: FSMContext):
