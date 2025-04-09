@@ -432,6 +432,7 @@ async def edit_order(callback_query: types.CallbackQuery, state: FSMContext):
     await callback_query.message.answer(get_translation(callback_query.from_user.id, "enter_product_name"))
     await state.set_state(OrderForm.entering_product_name)
 
+# Подтверждение заказа и отправка администратору
 @router.callback_query(lambda c: c.data == "confirm_order")
 async def confirm_order(callback_query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -504,58 +505,127 @@ async def confirm_order(callback_query: types.CallbackQuery, state: FSMContext):
     await callback_query.message.answer(get_translation(callback_query.from_user.id, "new_order_prompt"),
                                         reply_markup=new_order_keyboard)
 
+# Обработка кнопки "Запросить оплату"
 @router.callback_query(lambda c: c.data.startswith("request_payment_"))
 async def request_payment(callback_query: types.CallbackQuery, state: FSMContext):
     # Извлекаем ID клиента из callback_data
-    client_id = int(callback_query.data.split("_")[-1])
+    client_id = int(callback_query.data.split("_")[2])
+
+    # Получаем последний заказ клиента из таблицы orders
+    cursor.execute("""
+    SELECT name, address, phone, email, order_details, total_weight, total_cost
+    FROM orders
+    WHERE telegram_id = ?
+    ORDER BY created_at DESC
+    LIMIT 1
+    """, (client_id,))
+    order = cursor.fetchone()
+
+    if not order:
+        await callback_query.answer("Заказ не найден.", show_alert=True)
+        return
+
+    # Извлекаем данные заказа
+    name, address, phone, email, order_details, total_weight, total_cost = order
+
+    # Сохраняем данные заказа в состояние
+    await state.update_data(
+        client_id=client_id,
+        name=name,
+        address=address,
+        phone=phone,
+        email=email,
+        order_details=order_details,
+        total_weight=total_weight,
+        total_cost=total_cost
+    )
 
     # Сохраняем ID клиента в состоянии
     await state.update_data(client_id=client_id)
 
-    # Запрашиваем у администратора стоимость доставки
-    await callback_query.message.answer("Введите стоимость доставки (в €):")
+    # Запрашиваем у администратора ввод стоимости доставки
     await state.set_state(PaymentForm.total_amount)
+    await callback_query.message.answer(
+        f"Введите стоимость доставки для клиента:\n\n"
+        f"Стоимость товаров: {total_cost} €\n"
+        f"Введите стоимость доставки в формате: 12.50"
+    )
 
+
+# Обрабатываем ввод стоимости доставки
 @router.message(PaymentForm.total_amount)
-async def process_delivery_cost(message: types.Message, state: FSMContext):
+async def process_total_amount(message: types.Message, state: FSMContext):
     try:
-        # Получаем стоимость доставки
+        # Получаем введённую стоимость доставки
         delivery_cost = float(message.text)
-        if delivery_cost <= 0:
-            raise ValueError
 
-        # Получаем ID клиента из состояния
+        # Получаем данные из состояния
         data = await state.get_data()
-        client_id = data.get("client_id")
-        order_list = data.get("order_list", [])
+        client_id = data['client_id']
+        name = data['name']
+        address = data['address']
+        phone = data['phone']
+        email = data['email']
+        order_details = data['order_details']
+        total_weight = data['total_weight']
+        total_cost = data['total_cost']
 
-        # Рассчитываем итоговую сумму
-        total_cost = delivery_cost + (delivery_cost * 0.1)  # Добавляем 10% за услугу
+        # Рассчитываем стоимость услуги (10% от общей стоимости товаров)
+        service_cost = round(total_cost * 0.1, 2)
 
-        # Формируем список товаров
-        order_summary = "\n".join(
-            [f"{i+1}. {item['name']} - {item['quantity']} шт., {item['weight']} кг, {item['price']} €"
-             for i, item in enumerate(order_list)]
+        # Итоговая сумма
+        total_amount = round(total_cost + delivery_cost + service_cost, 2)
+
+        # Сохраняем итоговую сумму в таблицу orders
+        cursor.execute("""
+        UPDATE orders
+        SET total_cost = ?, is_paid = 0
+        WHERE id = (
+            SELECT id
+            FROM orders
+            WHERE telegram_id = ? AND is_paid = 0
+            ORDER BY created_at DESC
+            LIMIT 1
+        )
+        """, (total_amount, client_id))
+        conn.commit()
+
+        # Извлекаем язык клиента
+        lang = user_languages.get(client_id, "ru")
+
+        # Формируем сообщение с деталями заказа
+        order_details_message = get_translation(client_id, "order_summary",
+                                                 name=name,
+                                                 address=address,
+                                                 phone=phone,
+                                                 email=email,
+                                                 order_details=order_details,
+                                                 total_weight=total_weight,
+                                                 total_cost=total_cost)
+
+        # Формируем сообщение с расчётом стоимости
+        cost_breakdown_message = (
+            f"{get_translation(client_id, 'total_cost_of_goods')}: {total_cost} €\n"
+            f"{get_translation(client_id, 'delivery_cost')}: {delivery_cost} €\n"
+            f"{get_translation(client_id, 'service_cost')}: {service_cost} €\n\n"
+            f"{get_translation(client_id, 'total_amount')}: {total_amount} €"
         )
 
-        # Отправляем клиенту запрос на оплату с информацией о заказе
-        await bot.send_message(
-            client_id,
-            f"Ваш заказ:\n\n{order_summary}\n\n"
-            f"Стоимость доставки: {delivery_cost:.2f} €\n"
-            f"Итоговая сумма: {total_cost:.2f} €.\n"
-            f"Нажмите на кнопку ниже, чтобы оплатить.",
-            reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [
-                        InlineKeyboardButton(
-                            text=get_translation(client_id, "pay_order_prompt"),
-                            callback_data="pay_order"
-                        )
-                    ]
+        # Кнопка "Оплатить заказ"
+        pay_button_text = get_translation(client_id, "pay_order_prompt")
+        pay_button = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(text=pay_button_text, callback_data=f"pay_order_{client_id}")
                 ]
-            )
+            ]
         )
+
+         # Отправляем клиенту сообщение с деталями заказа
+        await bot.send_message(chat_id=client_id, text=order_details_message, parse_mode="Markdown")
+
+        # Отправляем клиенту сообщение с расчётом стоимости
+        await bot.send_message(chat_id=client_id, text=cost_breakdown_message, reply_markup=pay_button)
 
         # Уведомляем администратора, что запрос на оплату отправлен
         await message.answer("Запрос на оплату отправлен клиенту.")
@@ -564,17 +634,55 @@ async def process_delivery_cost(message: types.Message, state: FSMContext):
         # Если введено некорректное значение, просим администратора повторить ввод
         await message.answer("Введите корректную стоимость доставки (в €).")
 
-@router.callback_query(lambda c: c.data == "pay_order")
-async def pay_order(callback_query: types.CallbackQuery):
-    # Уведомляем клиента, что оплата принята
-    await callback_query.message.answer("Спасибо за оплату! Ваш заказ будет обработан в ближайшее время.")
+# Обработка кнопки "Оплатить заказ"
+@router.callback_query(lambda c: c.data.startswith("pay_order_"))
+async def send_invoice(callback_query: types.CallbackQuery):
+    # Извлекаем ID клиента из callback_data
+    client_id = int(callback_query.data.split("_")[2])
 
-    # Уведомляем администратора об успешной оплате
-    await bot.send_message(
-        ADMIN_ID,
-        f"Клиент {callback_query.from_user.id} оплатил заказ."
+    # Получаем итоговую сумму из таблицы orders
+    cursor.execute("""
+    SELECT total_cost
+    FROM orders
+    WHERE telegram_id = ? AND is_paid = 0
+    ORDER BY created_at DESC
+    LIMIT 1
+    """, (client_id,))
+    order = cursor.fetchone()
+
+    if not order:
+        await callback_query.answer("Итоговая сумма не найдена. Попробуйте снова.", show_alert=True)
+        return
+
+    total_amount = order[0]
+
+    # Извлекаем язык пользователя
+    lang = user_languages.get(client_id, "ru")
+
+    # Перевод текста сообщения и кнопки
+    payment_title = get_translation(client_id, "pay_order_prompt")  # Текст заголовка
+    payment_description = get_translation(client_id, "pay_order_prompt")  # Описание платежа
+
+    # Отправляем счёт через Telegram Payments
+    await bot.send_invoice(
+        chat_id=client_id,
+        title=payment_title,
+        description=payment_description,
+        payload=f"order_{client_id}",  # Уникальный идентификатор заказа
+        provider_token=PROVIDER_TOKEN,  # Токен платёжного провайдера
+        currency="EUR",
+        prices=[
+            types.LabeledPrice(label=payment_title, amount=int(total_amount * 100))  # Сумма в центах
+        ],
+        start_parameter="pay_order",
+        need_name=True,
+        need_phone_number=True,
+        need_email=True
     )
 
+    # Уведомляем администратора, что счёт отправлен
+    await callback_query.answer("Счёт отправлен клиенту.")
+    
 @router.callback_query(lambda c: c.data == "cancel_order")
 async def cancel_order(callback_query: types.CallbackQuery, state: FSMContext):
     # Очищаем состояние
@@ -597,6 +705,7 @@ async def cancel_order(callback_query: types.CallbackQuery, state: FSMContext):
     await callback_query.message.answer(get_translation(callback_query.from_user.id, "new_order_prompt"),
                                         reply_markup=new_order_keyboard)
 
+    
 # HTTP-сервер для поддержки активности
 async def handle(request):
     return web.Response(text="Bot is running!")
