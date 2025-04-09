@@ -426,6 +426,64 @@ async def finish_order(callback_query: types.CallbackQuery, state: FSMContext):
     # Отправляем итоговый список с кнопками
     await callback_query.message.edit_text(translation, reply_markup=keyboard)
 
+@router.callback_query(lambda c: c.data == "edit_order")
+async def edit_order(callback_query: types.CallbackQuery, state: FSMContext):
+    # Получаем данные из состояния
+    data = await state.get_data()
+    order_list = data.get("order_list", [])
+
+    if not order_list:
+        # Если список товаров пуст, уведомляем клиента
+        await callback_query.message.answer(get_translation(callback_query.from_user.id, "order_cancelled"))
+        return
+
+    # Формируем список товаров для редактирования
+    order_summary = "\n".join(
+        [f"{i+1}. {item['name']} - {item['quantity']} шт., {item['weight']} кг, {item['price']} €"
+         for i, item in enumerate(order_list)]
+    )
+
+    # Сообщение с текущим списком товаров
+    translation = get_translation(
+        callback_query.from_user.id,
+        "order_summary",
+        name=data.get("name", "N/A"),
+        address=data.get("address", "N/A"),
+        phone=data.get("phone", "N/A"),
+        email=data.get("email", "N/A"),
+        order_details=order_summary,
+        total_weight=sum(item["weight"] for item in order_list),
+        total_cost=sum(item["price"] for item in order_list)
+    )
+
+    # Клавиатура для управления заказом
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text=get_translation(callback_query.from_user.id, "button_continue_order"),
+                callback_data="continue_order"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text=get_translation(callback_query.from_user.id, "button_cancel_last_item"),
+                callback_data="cancel_last_item"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text=get_translation(callback_query.from_user.id, "button_finish_order"),
+                callback_data="finish_order"
+            )
+        ]
+    ])
+
+    # Отправляем сообщение с текущим списком товаров и клавиатурой
+    await callback_query.message.edit_text(translation, reply_markup=keyboard)
+
+    # Устанавливаем состояние для редактирования списка товаров
+    await state.set_state(OrderForm.confirming_list)
+
 # Подтверждение заказа и отправка администратору
 @router.callback_query(lambda c: c.data == "confirm_order")
 async def confirm_order(callback_query: types.CallbackQuery, state: FSMContext):
